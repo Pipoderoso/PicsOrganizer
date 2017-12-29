@@ -15,6 +15,7 @@ import com.drew.imaging.*;
 import com.drew.metadata.*;
 import com.drew.tools.*;
 import com.drew.metadata.exif.*;
+import com.drew.metadata.icc.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,12 +24,14 @@ import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
         
         
 public class PicsOrganizer {
     
-    private File[] filePaths; //IMPORTRANTE se puede meter dentro constructor
+    private File[] filePaths; 
     private PicInfo[] pics;
     private GroupPics[] groupPics;
     
@@ -59,7 +62,7 @@ public class PicsOrganizer {
         }
         
         int getPicDateYear(){
-            cal.setTime(picDate);
+            cal.setTime(picDate);  // MEJORA - Poner al principio de la clase
             return cal.get(Calendar.YEAR);
         }
         
@@ -70,26 +73,26 @@ public class PicsOrganizer {
         void setPicDate(Date picDate){
             this.picDate = picDate;
         }
-    }  // Class for saving various information from pics into one place
+    }  
     
-    class GroupPics {
+    class GroupPics {  // Class for saving arrays of PicInfo for different years
         int year;
         PicInfo[] content; 
         public GroupPics(int year, PicInfo[] content){
             this.year = year;
             this.content = content; 
         }
-    }  // Class for saving arrays of PicInfo for different years/months
+    } 
     
       
     void debPics() {  // for debugging
         for (int i = 0; i < groupPics.length; i++) {
             System.out.println(groupPics[i].year);
-            System.out.println("-----------------------------");
             for (int j = 0; j < groupPics[i].content.length; j++) {
-                System.out.println(groupPics[i].content[j].picDate);
+                System.out.println(groupPics[i].content[j].getPicDate());
             }
         }
+
     }
     
     void getPicsInfo(){   //Method for getting and saving Date and Picture name info. 
@@ -98,18 +101,30 @@ public class PicsOrganizer {
                 File file = new File(filePaths[i].getPath());
                 
                 Metadata metadata = ImageMetadataReader.readMetadata(file);
-
+               
+                
                 Directory directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-
+                
+                if(directory == null){ // QUICK FIX for metadata not being of type exif but of type icc (Think of a better solution for more types compatibility)
+                    directory = metadata.getFirstDirectoryOfType(IccDirectory.class);
+                    Date date = directory.getDate(IccDirectory.TAG_PROFILE_DATETIME);              
+                    String name = filePaths[i].getName();           
+                    PicInfo obj = new PicInfo(name, date);
+                    pics[i] = obj;
+                    continue;
+                }
+   
                 Date date = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+               
                 String name = filePaths[i].getName();
                 
                 PicInfo obj = new PicInfo(name, date);
-                pics[i] = obj; 
-               
+                pics[i] = obj;
+         
             
             } catch (ImageProcessingException e) {
                 System.err.println("EXCEPTION: " + e);
+                System.err.println("Not Compatible Metadata || There is no Orignal-Date on metadata");
             } catch (IOException e) {
                 System.err.println("EXCEPTION: " + e);
             }
@@ -117,7 +132,7 @@ public class PicsOrganizer {
     }
     
         
-    void organizePics(){  //This methor orgnizes the PicInfo array and divide themn depending of the year
+    void organizePics(){  //This method orgnizes the PicInfo array and divide them based on the year
         
         //Loop for ordering from recent dates to old dates
         for (int i = 0; i < pics.length - 1 ; i++){
@@ -126,48 +141,44 @@ public class PicsOrganizer {
  
 		if (pics[i].getPicDate().before(pics[j].getPicDate())){
 				
-                    Date tempDate = pics[i].getPicDate();
-                    pics[i].setPicDate(pics[j].getPicDate());
-                    pics[j].setPicDate(tempDate);
+                    PicInfo tempPic = pics[i];
+                    pics[i] = pics[j];
+                    pics[j] = tempPic;
 					
 		}
             }		
 	}
+        // ------------------------------
         
-        for (int j = 0; j < pics.length; j++) {
-            System.out.println(pics[j].picDate);
+        // Iteration to get number of years for separating pics 
+        Set<Integer> sYears = new LinkedHashSet<Integer>();
+        for (int i = 0; i < pics.length; i++) {
+            sYears.add(pics[i].getPicDateYear());
         }
+        int[] years = new int[sYears.size()];
+        int index = 0;
+        for(Integer i : sYears){
+            years[index++] = i;
+        }
+        // -----------------
         
-        List<Integer> years = new ArrayList<Integer>(); // Comment
-        years.add(pics[0].getPicDateYear()); //starting year
+        groupPics = new GroupPics[years.length];
         
-        for (int i = 0; i < pics.length - 1; i++) { 
+        for (int i = 0; i < years.length; i++) { //A better option would be to loop pics[] and look for a change of year in date. This way the program will run through every pic just once
             
-            if (pics[i].getPicDateYear() != pics[i+1].getPicDateYear()) { 
-                years.add(pics[i+1].getPicDateYear());
+            List<PicInfo> tempPics = new ArrayList<PicInfo>();
+            
+            for (int j = 0; j < pics.length; j++) {
+                if(pics[j].getPicDateYear() == years[i]){
+                    tempPics.add(pics[j]);
+                }
             }
+
+            GroupPics obj = new GroupPics(years[i],tempPics.toArray(new PicInfo[tempPics.size()]));
+            groupPics[i] = obj; 
         }
         
-        groupPics = new GroupPics[years.size()];
         
-        int limit = 1;
-        int lastLimit = 0;
-        
-        for (int i = 0; i < years.size(); i++) {   
-            for (int j = limit; j < pics.length ; j++) {
-                if (pics[j].getPicDateYear() != pics[j-1].getPicDateYear() || j == pics.length -1){
-                    lastLimit = (j == 1)?0:limit;
-                    limit = j;  
-                    System.out.println("hi");  
-                    break;
-                }        
-            }    
-            if (lastLimit == limit) {
-                limit +=1;
-            }
-            GroupPics obj = new GroupPics(years.get(i), Arrays.copyOfRange(pics, lastLimit  , limit)); //.copyOfRange method that works like thi [startIndex, endIndex) 
-            groupPics[i] = obj;                                                                                                       // if works only when there is 1 picture
-        }
         
     }
     
