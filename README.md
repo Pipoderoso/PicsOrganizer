@@ -12,6 +12,7 @@ Java Program for organizing pictures depending on the date the picture was taken
 ## Progress
 
 - [x] Method for reading exif-data from images 
-- [ ] Method for organizing images 
-- [ ] Method for creating directories and relocating images 
+- [x] Method for organizing images 
+- [x] Method for creating directories and relocating images 
+- [ ] Polish code
 - [ ] UI for the program
