@@ -23,28 +23,26 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.LinkedHashSet;
-import java.nio.file.StandardCopyOption;
 
         
         
 public class PicsOrganizer {
     
-    private File[] filePaths; 
+    private List<File> filePathsList = new ArrayList<File>(); 
     private PicInfo[] pics;
     private GroupPics[] groupPics;
     private String mainPath;
     
-    
     public PicsOrganizer(String path) {  //Method that produces an File array with each element on a directory
         mainPath = path;
-        File picsDir = new File(path);
-        filePaths = picsDir.listFiles();   
-        pics = new PicInfo[filePaths.length];
+        filesReader(path);
+        pics = new PicInfo[filePathsList.size()];
     }
     
     class PicInfo { //Class for saving each file information in one object
@@ -58,10 +56,7 @@ public class PicsOrganizer {
             this.picPath = picPath;
             this.picDate = picDate; 
             picName = picPath.substring(picPath.lastIndexOf("/")+1);
-        }
-
-        String getPicName(){
-            return picName; 
+            cal.setTime(picDate);
         }
         
         Date getPicDate(){
@@ -69,16 +64,7 @@ public class PicsOrganizer {
         }
         
         int getPicDateYear(){
-            cal.setTime(picDate);  // MEJORA - Poner al principio de la clase
             return cal.get(Calendar.YEAR);
-        }
-        
-        void setPicName(String picName){
-            this.picName = picName; 
-        }
-        
-        void setPicDate(Date picDate){
-            this.picDate = picDate;
         }
     }  
     
@@ -90,7 +76,7 @@ public class PicsOrganizer {
             this.content = content; 
         }
     } 
-      
+
     void debPics() {  // for debugging
         for (int i = 0; i < groupPics.length; i++) {
             System.out.println(groupPics[i].year);
@@ -101,33 +87,47 @@ public class PicsOrganizer {
 
     }
     
-    void getPicsInfo(){   //Method for getting and saving Date and Picture name info. 
-        for (int i = 0; i < filePaths.length; i++) {
-            try {
-                File file = new File(filePaths[i].getPath());
-                
+    private void filesReader(String pathName) { //Read Files Subdirectories and Files inside Subdirectories
+        File directory = new File(pathName);
+        File[] fList = directory.listFiles();
+        
+        for (File file : fList) {
+            if (file.isFile()) {
+                filePathsList.add(file);
+            } else if (file.isDirectory()) {
+                filesReader(file.getAbsolutePath());
+            }
+        }
+    } 
+    
+    void getPicsInfo(){   //Method for getting and saving Date and Picture names. ADD NEW ELSEIF CASE FOR NEW METADATA TYPES
+        
+        for (int i = 0; i < filePathsList.size(); i++) {          
+            try {             
+                File file = new File(filePathsList.get(i).getPath());             
                 Metadata metadata = ImageMetadataReader.readMetadata(file);
-               
+                Directory directory;
                 
-                Directory directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-                
-                if(directory == null){ // QUICK FIX for metadata not being of type exif but of type icc (Think of a better solution for more types compatibility)
-                    directory = metadata.getFirstDirectoryOfType(IccDirectory.class);
-                    Date date = directory.getDate(IccDirectory.TAG_PROFILE_DATETIME);              
-                    String path = filePaths[i].getPath();           
+                if (metadata.containsDirectoryOfType(ExifSubIFDDirectory.class)) {
+                    directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+                    Date date = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+                    String path = file.getPath();         // !! use fiel instead of
                     PicInfo obj = new PicInfo(path, date);
                     pics[i] = obj;
-                    continue;
-                }
-   
-                Date date = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-               
-                String path = filePaths[i].getPath();
-                
-                PicInfo obj = new PicInfo(path, date);
-                pics[i] = obj;
-         
-            
+                /*    ICC Metadata does not correspond to the date the pic was taken.
+                } else if (metadata.containsDirectoryOfType(IccDirectory.class)) {
+                    directory = metadata.getFirstDirectoryOfType(IccDirectory.class);
+                    Date date = directory.getDate(IccDirectory.TAG_PROFILE_DATETIME);              
+                    String path = file.getPath();           
+                    PicInfo obj = new PicInfo(path, date);
+                    pics[i] = obj;
+                */     
+                } else {
+                    Date date = new GregorianCalendar(0,0,1).getTime(); 
+                    String path = file.getPath();
+                    PicInfo obj = new PicInfo(path,date);
+                    pics[i] = obj; 
+                }     
             } catch (ImageProcessingException e) {
                 System.err.println("EXCEPTION: " + e);
                 System.err.println("Not Compatible Metadata || There is no Orignal-Date on metadata");
@@ -137,25 +137,20 @@ public class PicsOrganizer {
         }
     }
          
-    void organizePics(){  //This method orgnizes the PicInfo array and divide them based on the year
-        
+    void organizePics(){  //This method orgnizes the PicInfo array and arrange them based on the year       
         //Loop for ordering from recent dates to old dates
         for (int i = 0; i < pics.length - 1 ; i++){
-				
-            for (int j = i + 1; j < pics.length; j++){
- 
-		if (pics[i].getPicDate().before(pics[j].getPicDate())){
-				
+            for (int j = i + 1; j < pics.length; j++){ 
+		if (pics[i].getPicDate().before(pics[j].getPicDate())){				
                     PicInfo tempPic = pics[i];
                     pics[i] = pics[j];
-                    pics[j] = tempPic;
-					
+                    pics[j] = tempPic;					
 		}
             }		
 	}
         // ------------------------------
         
-        // Iteration to get number of years for separating pics 
+        // Iteration to get number of different years for separating pics 
         Set<Integer> sYears = new LinkedHashSet<Integer>();
         for (int i = 0; i < pics.length; i++) {
             sYears.add(pics[i].getPicDateYear());
@@ -178,20 +173,16 @@ public class PicsOrganizer {
                     tempPics.add(pics[j]);
                 }
             }
-
             GroupPics obj = new GroupPics(years[i],tempPics.toArray(new PicInfo[tempPics.size()]));
             groupPics[i] = obj; 
-        }
-        
-        
-        
+        }     
     }
     
     void dirCreator(){
         boolean dirCreated;
         
         for (int i = 0; i < groupPics.length; i++) {
-            String tempPath = mainPath + groupPics[i].year; //not crossplataform friendly FIX ! usar Paths
+            String tempPath = (groupPics[i].year!=1)?mainPath+groupPics[i].year:mainPath+"unknown"; //not crossplataform friendly FIX ! usar Paths
             dirCreated = new File(tempPath).mkdirs();
             if (dirCreated == true || new File(tempPath).exists()) {
                 for (int j = 0; j < groupPics[i].content.length; j++) {
@@ -202,8 +193,7 @@ public class PicsOrganizer {
                         System.out.println(ex.toString());
                     }
                 }
-            }
-            
+            }          
         }
     }
             
@@ -211,12 +201,10 @@ public class PicsOrganizer {
     public static void main(String[] args) {
         
         String path = "/home/pipe/Documents/FH/git-repos/PicsOrganizer/testPics/";
-        PicsOrganizer foo = new PicsOrganizer(path); 
-      
-        foo.getPicsInfo();
+        PicsOrganizer foo = new PicsOrganizer(path);   
+        foo.getPicsInfo();  //class methods have to be called in this order!
         foo.organizePics();
         foo.debPics();
-        foo.dirCreator();
-           
+        foo.dirCreator();          
     }    
 }

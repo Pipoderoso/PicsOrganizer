@@ -5,8 +5,8 @@ Java Program for organizing pictures depending on the date the picture was taken
 
 ## Info
 
-- If there isn't more than 2 pictures for a category, then a directory won't be created.
 - Images that don't have any date information on it's exif-data will be moved into a directory named 'unknown'
+- Program will read and organize pictures inside directories.
 - PS: back up images before using program
 
 ## Progress
@@ -14,5 +14,10 @@ Java Program for organizing pictures depending on the date the picture was taken
 - [x] Method for reading exif-data from images 
 - [x] Method for organizing images 
 - [x] Method for creating directories and relocating images 
-- [ ] Polish code
-- [ ] UI for the program
+- [x] Polish code
+- [ ] GUI for the program
+
+### (Optional) 
+
+- [ ] Arrange pictures by month too
+
