@@ -17,6 +17,8 @@ import com.drew.tools.*;
 import com.drew.metadata.exif.*;
 import com.drew.metadata.icc.*;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,6 +31,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.LinkedHashSet;
+
+
 
         
         
@@ -175,6 +179,19 @@ public class PicsOrganizer {
             }
             GroupPics obj = new GroupPics(years[i],tempPics.toArray(new PicInfo[tempPics.size()]));
             groupPics[i] = obj; 
+            
+            //Set names for organizing by filename too
+            for (int j = 0; j < groupPics[i].content.length; j++) {
+                String stringNum = String.valueOf(groupPics[i].content.length);
+                int zeros = stringNum.length();
+                //DecimalFormat num = new DecimalFormat("#"+);
+                String num = String.valueOf(j);
+                num = StringUtils.leftPad(num, zeros, '0');
+                
+                
+                String tempString = groupPics[i].content[j].picName;
+                groupPics[i].content[j].picName = num + " - " + tempString;
+            }
         }     
     }
     
