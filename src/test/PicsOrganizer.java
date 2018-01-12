@@ -197,7 +197,7 @@ public class PicsOrganizer {
         }
     }
             
-    
+    /*
     public static void main(String[] args) {
         
         String path = "/home/pipe/Documents/FH/git-repos/PicsOrganizer/testPics/";
@@ -205,6 +205,8 @@ public class PicsOrganizer {
         foo.getPicsInfo();  //class methods have to be called in this order!
         foo.organizePics();
         foo.debPics();
-        foo.dirCreator();          
+        foo.dirCreator();    
+        
     }    
+    */
 }

@@ -17,7 +17,8 @@ Java Program for organizing pictures depending on the date the picture was taken
 - [x] Polish code
 - [ ] GUI for the program
 
-### (Optional) 
+##### (Optional) 
 
 - [ ] Arrange pictures by month too
+- [ ] Rename pictures and name them by its relative order inside each directory
 
