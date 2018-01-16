@@ -15,10 +15,14 @@ Java Program for organizing pictures depending on the date the picture was taken
 - [x] Method for organizing images 
 - [x] Method for creating directories and relocating images 
 - [x] Polish code
-- [ ] GUI for the program
+- [x] GUI for the program
 
 ##### (Optional) 
 
 - [ ] Arrange pictures by month too
 - [ ] Rename pictures and name them by its relative order inside each directory
 
+##### Issues
+- Check error case: path without pictures
+- avoid moving files that are not pictures
+- GUI errors by statusLabel text

@@ -29,6 +29,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.LinkedHashSet;
+import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.BufferedInputStream;
+       
 
         
         
@@ -38,10 +42,11 @@ public class PicsOrganizer {
     private PicInfo[] pics;
     private GroupPics[] groupPics;
     private String mainPath;
+    private boolean validPath;
     
     public PicsOrganizer(String path) {  //Method that produces an File array with each element on a directory
-        mainPath = path;
-        filesReader(path);
+        mainPath = (path.charAt(path.length() - 1)=='/')?path:(path+"/");
+        filesReader(mainPath);
         pics = new PicInfo[filePathsList.size()];
     }
     
@@ -76,7 +81,11 @@ public class PicsOrganizer {
             this.content = content; 
         }
     } 
-
+    
+    public boolean isValidPath(){
+        return validPath;
+    }
+            
     void debPics() {  // for debugging
         for (int i = 0; i < groupPics.length; i++) {
             System.out.println(groupPics[i].year);
@@ -89,14 +98,19 @@ public class PicsOrganizer {
     
     private void filesReader(String pathName) { //Read Files Subdirectories and Files inside Subdirectories
         File directory = new File(pathName);
-        File[] fList = directory.listFiles();
-        
-        for (File file : fList) {
-            if (file.isFile()) {
-                filePathsList.add(file);
-            } else if (file.isDirectory()) {
-                filesReader(file.getAbsolutePath());
+        if (directory.exists()){
+            validPath = true;
+            File[] fList = directory.listFiles();
+
+            for (File file : fList) {
+                if (file.isFile()) {
+                    filePathsList.add(file);
+                } else if (file.isDirectory()) {
+                    filesReader(file.getAbsolutePath());
+                }
             }
+        } else {
+            validPath = false;
         }
     } 
     
@@ -104,36 +118,58 @@ public class PicsOrganizer {
         
         for (int i = 0; i < filePathsList.size(); i++) {          
             try {             
-                File file = new File(filePathsList.get(i).getPath());             
-                Metadata metadata = ImageMetadataReader.readMetadata(file);
-                Directory directory;
+                File file = new File(filePathsList.get(i).getPath());  
                 
-                if (metadata.containsDirectoryOfType(ExifSubIFDDirectory.class)) {
-                    directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-                    Date date = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-                    String path = file.getPath();         // !! use fiel instead of
-                    PicInfo obj = new PicInfo(path, date);
-                    pics[i] = obj;
-                /*    ICC Metadata does not correspond to the date the pic was taken.
-                } else if (metadata.containsDirectoryOfType(IccDirectory.class)) {
-                    directory = metadata.getFirstDirectoryOfType(IccDirectory.class);
-                    Date date = directory.getDate(IccDirectory.TAG_PROFILE_DATETIME);              
-                    String path = file.getPath();           
-                    PicInfo obj = new PicInfo(path, date);
-                    pics[i] = obj;
-                */     
+                InputStream is = new FileInputStream(file.getPath());
+                BufferedInputStream bis = new BufferedInputStream(is);
+                FileType fileType = FileTypeDetector.detectFileType(bis); //for detecting Filetype
+                         
+                if (fileType != FileType.Unknown){
+                    
+                    Metadata metadata = ImageMetadataReader.readMetadata(file);
+                    Directory directory;
+                    
+                    if (metadata.containsDirectoryOfType(ExifSubIFDDirectory.class)) {
+                        directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+                        Date date = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+                        String path = file.getPath();         // !! use fiel instead of
+                        PicInfo obj = new PicInfo(path, date);
+                        pics[i] = obj;
+                    /*    ICC Metadata does not correspond to the date the pic was taken.
+                    } else if (metadata.containsDirectoryOfType(IccDirectory.class)) {
+                        directory = metadata.getFirstDirectoryOfType(IccDirectory.class);
+                        Date date = directory.getDate(IccDirectory.TAG_PROFILE_DATETIME);              
+                        String path = file.getPath();           
+                        PicInfo obj = new PicInfo(path, date);
+                        pics[i] = obj;
+                    */     
+                    } else {
+                        Date date = new GregorianCalendar(0,0,1).getTime(); 
+                        String path = file.getPath();
+                        PicInfo obj = new PicInfo(path,date);
+                        pics[i] = obj; 
+                    }
                 } else {
                     Date date = new GregorianCalendar(0,0,1).getTime(); 
                     String path = file.getPath();
                     PicInfo obj = new PicInfo(path,date);
                     pics[i] = obj; 
-                }     
+                }             
             } catch (ImageProcessingException e) {
                 System.err.println("EXCEPTION: " + e);
                 System.err.println("Not Compatible Metadata || There is no Orignal-Date on metadata");
             } catch (IOException e) {
                 System.err.println("EXCEPTION: " + e);
+                validPath = false; 
             }
+        }
+        for (int i = 0; i < pics.length; i++) { //check if there is at least 1 picture
+            Date tempDate = new GregorianCalendar(0,0,1).getTime();
+            if (pics[i].picDate != tempDate){  //only requieres 1 picture for the path to be valid
+                validPath=true;
+                break;
+            }
+            validPath=false;
         }
     }
          
@@ -175,10 +211,10 @@ public class PicsOrganizer {
             }
             GroupPics obj = new GroupPics(years[i],tempPics.toArray(new PicInfo[tempPics.size()]));
             groupPics[i] = obj; 
-        }     
+        }   
     }
     
-    void dirCreator(){
+    void dirCreator(){ //creates directories and move pics
         boolean dirCreated;
         
         for (int i = 0; i < groupPics.length; i++) {
@@ -195,6 +231,7 @@ public class PicsOrganizer {
                 }
             }          
         }
+        validPath = false;
     }
             
     /*
