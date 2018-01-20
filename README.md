@@ -23,6 +23,3 @@ Java Program for organizing pictures depending on the date the picture was taken
 - [ ] Rename pictures and name them by its relative order inside each directory
 
 ##### Issues
-- Check error case: path without pictures
-- avoid moving files that are not pictures
-- GUI errors by statusLabel text
