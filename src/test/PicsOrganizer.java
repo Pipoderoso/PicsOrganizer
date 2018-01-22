@@ -31,6 +31,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.LinkedHashSet;
+import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.BufferedInputStream;
+       
 
 
 
@@ -42,10 +46,14 @@ public class PicsOrganizer {
     private PicInfo[] pics;
     private GroupPics[] groupPics;
     private String mainPath;
+    private boolean validPath;
+    private int subDirLevel = 0; 
+    private int maxSubDirLevel = 2; // Maximum number of subdir to scan
+    
     
     public PicsOrganizer(String path) {  //Method that produces an File array with each element on a directory
-        mainPath = path;
-        filesReader(path);
+        mainPath = (path.charAt(path.length() - 1)=='/')?path:(path+"/");
+        filesReader(mainPath);
         pics = new PicInfo[filePathsList.size()];
     }
     
@@ -53,9 +61,8 @@ public class PicsOrganizer {
         private String picPath;
         private String picName; 
         private Date picDate;  
-        private Calendar cal = Calendar.getInstance();
-        
-        
+        private Calendar cal = Calendar.getInstance();;
+              
         public PicInfo(String picPath, Date picDate) {
             this.picPath = picPath;
             this.picDate = picDate; 
@@ -80,38 +87,61 @@ public class PicsOrganizer {
             this.content = content; 
         }
     } 
-
-    void debPics() {  // for debugging
-        for (int i = 0; i < groupPics.length; i++) {
-            System.out.println(groupPics[i].year);
-            for (int j = 0; j < groupPics[i].content.length; j++) {
-                System.out.println(groupPics[i].content[j].getPicDate());
-            }
-        }
-
+    
+    public boolean isValidPath(){
+        return validPath;
+    }
+    
+    public int getNumberPics(){
+        return filePathsList.size();
     }
     
     private void filesReader(String pathName) { //Read Files Subdirectories and Files inside Subdirectories
         File directory = new File(pathName);
-        File[] fList = directory.listFiles();
-        
-        for (File file : fList) {
-            if (file.isFile()) {
-                filePathsList.add(file);
-            } else if (file.isDirectory()) {
-                filesReader(file.getAbsolutePath());
+        if (directory.exists()){ 
+            validPath = true;
+            File[] fList = directory.listFiles();
+
+            for (File file : fList) { 
+                if (file.isFile()) {
+                    try{
+                        InputStream is = new FileInputStream(file.getPath());
+                        BufferedInputStream bis = new BufferedInputStream(is);
+                        FileType fileType = FileTypeDetector.detectFileType(bis); //for detecting Filetype
+                        if (fileType == FileType.Png || fileType == FileType.Jpeg || fileType == FileType.Gif || fileType == FileType.Bmp ){
+                            filePathsList.add(file);
+                        }
+                    } catch (IOException e) {                    
+                        if (file.length() != 0){
+                            validPath = false; 
+                            System.err.println("EXCEPTION: " + e);
+                        }
+                       System.err.println("FILE DISCARDED BECAUSE IT WAS EMPTY: " + file.getPath());
+                    }
+                } else if (file.isDirectory() && subDirLevel < maxSubDirLevel) {
+                    subDirLevel++;
+                    filesReader(file.getAbsolutePath()); 
+                    if (subDirLevel > 0) { //When we exit the FilesReader method, that means that the program finalized examinating a subdirectory level. 
+                        subDirLevel--;
+                    }
+                } 
             }
+        } else {
+            validPath = false;
         }
     } 
     
     void getPicsInfo(){   //Method for getting and saving Date and Picture names. ADD NEW ELSEIF CASE FOR NEW METADATA TYPES
-        
+        if (filePathsList.isEmpty()) {
+            validPath = false;
+        }
         for (int i = 0; i < filePathsList.size(); i++) {          
             try {             
-                File file = new File(filePathsList.get(i).getPath());             
+                
+                File file = new File(filePathsList.get(i).getPath());       
                 Metadata metadata = ImageMetadataReader.readMetadata(file);
                 Directory directory;
-                
+
                 if (metadata.containsDirectoryOfType(ExifSubIFDDirectory.class)) {
                     directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
                     Date date = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
@@ -127,16 +157,19 @@ public class PicsOrganizer {
                     pics[i] = obj;
                 */     
                 } else {
-                    Date date = new GregorianCalendar(0,0,1).getTime(); 
+                    Date date = new GregorianCalendar(0,0,1).getTime();  
                     String path = file.getPath();
                     PicInfo obj = new PicInfo(path,date);
                     pics[i] = obj; 
-                }     
+                }
+                 
+                
             } catch (ImageProcessingException e) {
                 System.err.println("EXCEPTION: " + e);
                 System.err.println("Not Compatible Metadata || There is no Orignal-Date on metadata");
             } catch (IOException e) {
                 System.err.println("EXCEPTION: " + e);
+                validPath = false; 
             }
         }
     }
@@ -179,6 +212,7 @@ public class PicsOrganizer {
             }
             GroupPics obj = new GroupPics(years[i],tempPics.toArray(new PicInfo[tempPics.size()]));
             groupPics[i] = obj; 
+
             
             //Set names for organizing by filename too
             for (int j = 0; j < groupPics[i].content.length; j++) {
@@ -195,7 +229,7 @@ public class PicsOrganizer {
         }     
     }
     
-    void dirCreator(){
+    void dirCreator(){ //creates directories and move pics
         boolean dirCreated;
         
         for (int i = 0; i < groupPics.length; i++) {
@@ -212,16 +246,6 @@ public class PicsOrganizer {
                 }
             }          
         }
-    }
-            
-    
-    public static void main(String[] args) {
-        
-        String path = "/home/pipe/Documents/FH/git-repos/PicsOrganizer/testPics/";
-        PicsOrganizer foo = new PicsOrganizer(path);   
-        foo.getPicsInfo();  //class methods have to be called in this order!
-        foo.organizePics();
-        foo.debPics();
-        foo.dirCreator();          
-    }    
+        validPath = false;
+    }        
 }
