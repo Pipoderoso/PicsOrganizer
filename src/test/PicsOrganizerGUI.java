@@ -35,6 +35,7 @@ public class PicsOrganizerGUI extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("PicsOrganizer");
+        setResizable(false);
 
         dirLabel.setText("Dir");
 
@@ -53,27 +54,22 @@ public class PicsOrganizerGUI extends javax.swing.JFrame {
             }
         });
 
-        statusLabel.setText("ok");
-
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
+                .addComponent(dirLabel)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(dirLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(pathText)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(organizeButton)
-                                .addGap(47, 47, 47)
-                                .addComponent(statusLabel)
-                                .addGap(0, 141, Short.MAX_VALUE))))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(organizeButton)
+                        .addGap(0, 201, Short.MAX_VALUE))
+                    .addComponent(pathText)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(statusLabel)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(changepathButton)))
                 .addContainerGap())
         );
@@ -84,13 +80,13 @@ public class PicsOrganizerGUI extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(dirLabel)
                     .addComponent(pathText, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(changepathButton)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 48, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(organizeButton)
+                    .addComponent(changepathButton)
                     .addComponent(statusLabel))
-                .addContainerGap())
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(organizeButton)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         layout.linkSize(javax.swing.SwingConstants.VERTICAL, new java.awt.Component[] {changepathButton, dirLabel, pathText});
@@ -102,6 +98,7 @@ public class PicsOrganizerGUI extends javax.swing.JFrame {
     private void organizeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_organizeButtonActionPerformed
         foo.organizePics();
         foo.dirCreator();
+        statusLabel.setText("Done!");
         organizeButton.setEnabled(foo.isValidPath());
         
     }//GEN-LAST:event_organizeButtonActionPerformed
@@ -110,20 +107,20 @@ public class PicsOrganizerGUI extends javax.swing.JFrame {
         
         path = pathText.getText().trim();
         if (path.isEmpty()) {
-            statusLabel.setText("Not Valid");
+            statusLabel.setText("Invalid path");
 
         }
         else {
             
             foo = new PicsOrganizer(path); //check if the path exists
             if (!foo.isValidPath()) {
-                statusLabel.setText("Not valid path");
+                statusLabel.setText("Invalid path");
             } else {
                 foo.getPicsInfo(); // checks if there is any picture in path
                 if (!foo.isValidPath()) {
                     statusLabel.setText("No pictures found");
                 } else {
-                    statusLabel.setText("OK!");
+                    statusLabel.setText("OK! " + foo.getNumberPics() + " Pictures found");
                     organizeButton.setEnabled(foo.isValidPath());
                 }
                     

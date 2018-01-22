@@ -87,6 +87,9 @@ public class PicsOrganizer {
     public boolean isValidPath(){
         return validPath;
     }
+    public int getNumberPics(){
+        return filePathsList.size();
+    }
     
     private void filesReader(String pathName) { //Read Files Subdirectories and Files inside Subdirectories
         File directory = new File(pathName);
